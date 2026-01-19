@@ -555,6 +555,23 @@ class TaskAllocatorUI:
         # 确保窗口显示
         self.root.update()
 
+        # 添加窗口关闭事件处理，确保程序能正常退出
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        """窗口关闭事件处理"""
+        try:
+            # 停止所有后台线程
+            import threading
+            for thread in threading.enumerate():
+                if thread.is_alive() and thread.name != 'MainThread':
+                    thread.join(timeout=1.0)
+        except Exception as e:
+            print(f"关闭线程时出错: {e}")
+
+        # 销毁窗口，退出程序
+        self.root.destroy()
+
     def setup_styles(self):
         """设置样式"""
         style = ttk.Style()
