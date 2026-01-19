@@ -503,8 +503,8 @@ class TaskAllocatorUI:
         # 创建UI
         self.create_widgets()
 
-        # 加载示例数据
-        self.load_sample_data()
+        # 延迟加载示例数据，避免阻塞UI
+        self.root.after(100, self.load_sample_data_async)
 
         # 确保窗口显示
         self.root.update()
@@ -805,6 +805,45 @@ class TaskAllocatorUI:
             self.update_status("示例数据加载成功！", "success")
         except Exception as e:
             self.update_status(f"加载示例数据失败: {str(e)}", "error")
+
+    def load_sample_data_async(self):
+        """异步加载示例数据，避免阻塞UI"""
+        def load_data():
+            try:
+                # 创建示例数据
+                history_data = {
+                    'nsrsbh': ['001', '002', '003', '004', '005'],
+                    'nsrmc': ['公司A', '公司B', '公司C', '公司D', '公司E'],
+                    'wchj_lz_rwpcmc': ['任务1', '任务2', '任务3', '任务4', '任务5'],
+                    'ydczry_mc': ['张三', '李四', '张三', '王五', '李四'],
+                    'ydcljg': ['机关1', '机关1', '机关2', '机关2', '机关1'],
+                    'xfsj': ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05'],
+                    'fksj': ['2023-01-02', None, '2023-01-05', None, None],
+                    'yjwcsj': ['2023-01-03', '2023-01-10', '2023-01-06', '2023-01-08', '2023-01-12']
+                }
+
+                new_tasks_data = {
+                    'nsrsbh': ['006', '007', '008'],
+                    'nsrmc': ['公司F', '公司G', '公司H'],
+                    'wchj_lz_rwpcmc': ['任务6', '任务7', '任务8'],
+                    'ydczry_mc': [None, None, None],
+                    'ydcljg': ['机关1', '机关2', '机关1'],
+                    'xfsj': ['2023-01-06', '2023-01-06', '2023-01-06'],
+                    'fksj': [None, None, None],
+                    'yjwcsj': ['2023-01-07', '2023-01-09', '2023-01-15']
+                }
+
+                self.history_df = pd.DataFrame(history_data)
+                self.new_tasks_df = pd.DataFrame(new_tasks_data)
+
+                # 在主线程更新UI
+                self.root.after(0, lambda: self.update_status("示例数据加载成功！", "success"))
+            except Exception as e:
+                self.root.after(0, lambda: self.update_status(f"加载示例数据失败: {str(e)}", "error"))
+
+        # 在后台线程中加载数据
+        thread = threading.Thread(target=load_data, daemon=True)
+        thread.start()
 
     def load_history_data(self):
         """加载历史数据"""
@@ -1521,7 +1560,7 @@ class TaskAllocatorUI:
         """重置系统"""
         if messagebox.askyesno("确认", "确定要重置系统吗？"):
             self.clear_all_data()
-            self.load_sample_data()
+            self.load_sample_data_async()
             self.update_status("系统已重置", "success")
 
     def show_help(self):
