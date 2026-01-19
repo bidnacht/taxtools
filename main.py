@@ -1206,8 +1206,11 @@ class TaskAllocatorUI:
                 ax1.axhline(y=90, color='red', linestyle='--', alpha=0.5, label='警戒线')
                 ax1.legend()
 
-                # 简称字数少，改为纵向排列
-                ax1.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
+                # 横轴标签使用textpath实现汉字竖排
+                ax1.set_xticks(range(len(depts_display)))
+                ax1.set_xticklabels([])
+                for i, label in enumerate(depts_display):
+                    ax1.text(i, -0.15, label, rotation=0, ha='center', va='top', fontsize=9)
 
                 # 添加数值标签
                 for bar in bars:
@@ -1215,7 +1218,7 @@ class TaskAllocatorUI:
                     ax1.text(bar.get_x() + bar.get_width() / 2., height + 1,
                              f'{height:.1f}%', ha='center', va='bottom', fontsize=9)
 
-                # 调整布局，底部留出空间给纵向标签
+                # 调整布局，底部留出空间给竖排标签
                 plt.subplots_adjust(bottom=0.25, top=0.92)
             else:
                 ax1.text(0.5, 0.5, '暂无负载数据', ha='center', va='center')
@@ -1340,11 +1343,11 @@ class TaskAllocatorUI:
                     ax1 = ax.twinx()
 
                     # 柱状图：平均处理时间（天）
-                    bars1 = ax.bar(x - width / 2, avg_days_display, width,
+                    bars1 = ax.bar(x, avg_days_display, width,
                                    label='平均处理时间(天)', color='skyblue')
 
-                    # 折线图：完成率
-                    line1 = ax1.plot(x + width / 2, completion_rates_display,
+                    # 折线图：完成率（使用相同的x坐标对齐）
+                    line1 = ax1.plot(x, completion_rates_display,
                                      marker='o', color='orange',
                                      label='完成率(%)', linewidth=2)
 
@@ -1360,12 +1363,12 @@ class TaskAllocatorUI:
                     ax.set_ylim(0, max(avg_days_display) * 1.2 if avg_days_display else 10)
                     ax1.set_ylim(0, 110)
 
-                    # 合并图例并移到图表上方
+                    # 合并图例并移到图表右上角
                     bars1_line = [bars1]
                     lines1 = ax.get_legend_handles_labels()[0]
                     lines2 = ax1.get_legend_handles_labels()[0]
                     ax.legend(lines1 + lines2, ['平均处理时间(天)', '完成率(%)'],
-                             loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
+                             loc='upper right')
 
                     # 添加数值标签
                     for bar in bars1:
@@ -1374,7 +1377,7 @@ class TaskAllocatorUI:
                                 f'{height:.1f}天', ha='center', va='bottom', fontsize=9)
 
                     for i, v in enumerate(completion_rates_display):
-                        ax1.text(i + width / 2, v + 2, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
+                        ax1.text(i, v + 2, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
 
                     # 调整布局，底部留出空间给纵向标签
                     plt.subplots_adjust(bottom=0.25, top=0.85)
@@ -1421,8 +1424,8 @@ class TaskAllocatorUI:
                     bars1 = ax.bar(x - width / 2, personnel_display, width,
                                    label='人员数量', color='lightgreen')
 
-                    # 折线图：平均负载率
-                    line1 = ax1.plot(x + width / 2, avg_loads_display,
+                    # 折线图：平均负载率（使用相同的x坐标对齐）
+                    line1 = ax1.plot(x, avg_loads_display,
                                      marker='s', color='coral',
                                      label='平均负载率(%)', linewidth=2)
 
@@ -1439,12 +1442,12 @@ class TaskAllocatorUI:
                         ax.set_ylim(0, max(personnel_display) * 1.2)
                     ax1.set_ylim(0, 110)
 
-                    # 合并图例并移到图表上方
+                    # 合并图例并移到图表右上角
                     bars1_line = [bars1]
                     lines1 = ax.get_legend_handles_labels()[0]
                     lines2 = ax1.get_legend_handles_labels()[0]
                     ax.legend(lines1 + lines2, ['人员数量', '平均负载率(%)'],
-                             loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
+                             loc='upper right')
 
                     # 添加数值标签
                     for bar in bars1:
