@@ -565,7 +565,7 @@ class TaskAllocatorUI:
             ("加载历史数据", self.load_history_data),
             ("加载新任务", self.load_new_tasks),
             ("数据预览", self.preview_data),
-            ("智能分配", self.run_allocation),
+            ("智能分配", self.confirm_allocation),
             ("生成报告", self.generate_report),
             ("导出结果", self.export_results),
             ("重置系统", self.reset_system),
@@ -677,7 +677,7 @@ class TaskAllocatorUI:
         control_frame.pack(fill=tk.X, pady=5)
 
         ttk.Button(control_frame, text="执行分配",
-                   command=self.run_allocation).pack(side=tk.LEFT, padx=5)
+                   command=self.confirm_allocation).pack(side=tk.LEFT, padx=5)
         ttk.Button(control_frame, text="导出Excel",
                    command=self.export_results).pack(side=tk.LEFT, padx=5)
         ttk.Button(control_frame, text="清空结果",
@@ -947,6 +947,18 @@ class TaskAllocatorUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         return tree
+
+    def confirm_allocation(self):
+        """确认分配操作"""
+        if self.history_df is None or self.new_tasks_df is None:
+            messagebox.showwarning("提示", "请先加载历史数据和新任务数据")
+            return
+
+        task_count = len(self.new_tasks_df)
+        confirm_msg = f"确定要执行智能分配吗？\n\n将要分配 {task_count} 个新任务"
+        
+        if messagebox.askyesno("确认操作", confirm_msg):
+            self.run_allocation()
 
     def run_allocation(self):
         """执行分配"""
