@@ -1105,7 +1105,7 @@ class TaskAllocatorUI:
                 widget.destroy()
 
             # 负载分布图
-            fig1, ax1 = plt.subplots(figsize=(5, 3))
+            fig1, ax1 = plt.subplots(figsize=(6, 4))
             depts = list(self.allocator.system_load['dept_load'].keys())
 
             if depts:
@@ -1127,11 +1127,17 @@ class TaskAllocatorUI:
                 ax1.axhline(y=90, color='red', linestyle='--', alpha=0.5, label='警戒线')
                 ax1.legend()
 
+                # 旋转横轴标签以避免重叠
+                ax1.set_xticklabels(depts, rotation=45, ha='right')
+
                 # 添加数值标签
                 for bar in bars:
                     height = bar.get_height()
                     ax1.text(bar.get_x() + bar.get_width() / 2., height + 1,
                              f'{height:.1f}%', ha='center', va='bottom', fontsize=8)
+
+                # 调整布局以避免标签被截断
+                plt.tight_layout()
             else:
                 ax1.text(0.5, 0.5, '暂无负载数据', ha='center', va='center')
 
@@ -1184,7 +1190,7 @@ class TaskAllocatorUI:
             for widget in self.analysis_canvas.winfo_children():
                 widget.destroy()
 
-            fig, ax = plt.subplots(figsize=(8, 5))
+            fig, ax = plt.subplots(figsize=(10, 6))
 
             if analysis_type == "load_distribution":
                 # 负载分布
@@ -1202,11 +1208,17 @@ class TaskAllocatorUI:
                     ax.axhline(y=90, color='red', linestyle='--', alpha=0.7, label='警戒线')
                     ax.legend()
 
+                    # 旋转横轴标签以避免重叠
+                    ax.set_xticklabels(depts, rotation=45, ha='right')
+
                     # 添加数值标签
                     for bar in bars:
                         height = bar.get_height()
                         ax.text(bar.get_x() + bar.get_width() / 2., height + 1,
                                 f'{height:.1f}%', ha='center', va='bottom')
+
+                    # 调整布局
+                    plt.tight_layout()
                 else:
                     ax.text(0.5, 0.5, '暂无机关负载数据', ha='center', va='center')
 
@@ -1257,11 +1269,12 @@ class TaskAllocatorUI:
                     ax.set_ylim(0, max(avg_days_display) * 1.2 if avg_days_display else 10)
                     ax1.set_ylim(0, 110)
 
-                    # 合并图例
+                    # 合并图例并移到图表外部
                     bars1_line = [bars1]
                     lines1 = ax.get_legend_handles_labels()[0]
                     lines2 = ax1.get_legend_handles_labels()[0]
-                    ax.legend(lines1 + lines2, ['平均处理时间(天)', '完成率(%)'], loc='upper right')
+                    ax.legend(lines1 + lines2, ['平均处理时间(天)', '完成率(%)'],
+                             loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
 
                     # 添加数值标签
                     for bar in bars1:
@@ -1327,11 +1340,12 @@ class TaskAllocatorUI:
                         ax.set_ylim(0, max(personnel_display) * 1.2)
                     ax1.set_ylim(0, 110)
 
-                    # 合并图例
+                    # 合并图例并移到图表外部
                     bars1_line = [bars1]
                     lines1 = ax.get_legend_handles_labels()[0]
                     lines2 = ax1.get_legend_handles_labels()[0]
-                    ax.legend(lines1 + lines2, ['人员数量', '平均负载率(%)'], loc='upper right')
+                    ax.legend(lines1 + lines2, ['人员数量', '平均负载率(%)'],
+                             loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
 
                     # 添加数值标签
                     for bar in bars1:
