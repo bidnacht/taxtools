@@ -379,12 +379,14 @@ class ModernTaskAllocator:
 
         allocations = []
         unallocated_tasks = []
+        total_tasks = len(new_tasks_sorted)
 
-        for _, task in new_tasks_sorted.iterrows():
+        # 使用itertuples替代iterrows以提升性能
+        for idx, task in enumerate(new_tasks_sorted.itertuples(index=False), 1):
             try:
-                task_id = task['task_id']
-                dept = task['ydcljg']
-                urgency = task['urgency_score']
+                task_id = task.task_id
+                dept = task.ydcljg
+                urgency = task.urgency_score
 
                 # 检查机关是否存在
                 if dept not in self.dept_stats:
@@ -438,9 +440,9 @@ class ModernTaskAllocator:
                 # 记录分配
                 allocation = {
                     'task_id': task_id,
-                    'nsrsbh': task['nsrsbh'],
-                    'nsrmc': task['nsrmc'],
-                    'wchj_lz_rwpcmc': task['wchj_lz_rwpcmc'],
+                    'nsrsbh': task.nsrsbh,
+                    'nsrmc': task.nsrmc,
+                    'wchj_lz_rwpcmc': task.wchj_lz_rwpcmc,
                     'assigned_department': dept,
                     'assigned_person': best_person,
                     'urgency_score': urgency,
@@ -470,11 +472,11 @@ class ModernTaskAllocator:
                 )
 
             except Exception as e:
-                print(f"分配任务 {task.get('task_id', '未知')} 失败: {e}")
+                print(f"分配任务 {task_id if 'task_id' in locals() else '未知'} 失败: {e}")
                 unallocated_tasks.append({
-                    'task_id': task.get('task_id', '未知'),
+                    'task_id': task_id if 'task_id' in locals() else '未知',
                     'reason': f'分配过程出错: {str(e)}',
-                    'urgency_score': task.get('urgency_score', 0)
+                    'urgency_score': urgency if 'urgency' in locals() else 0
                 })
                 continue
 
