@@ -37,6 +37,50 @@ class ModernTaskAllocator:
         self.new_tasks_df = new_tasks_df.copy() if new_tasks_df is not None else None
         self.current_time = current_time or datetime.now()
 
+        # 机关名称映射（全名 -> 简称）
+        self.dept_name_mapping = {
+            '国家税务总局武汉市江岸区税务局': '江岸',
+            '国家税务总局武汉市江汉区税务局': '江汉',
+            '国家税务总局武汉市硚口区税务局': '硚口',
+            '国家税务总局武汉市汉阳区税务局': '汉阳',
+            '国家税务总局武汉市武昌区税务局': '武昌',
+            '国家税务总局武汉市青山区税务局': '青山',
+            '国家税务总局武汉东湖新技术开发区税务局': '东湖',
+            '国家税务总局武汉经济技术开发区（汉南区）税务局': '武经',
+            '国家税务总局武汉市洪山区税务局': '洪山',
+            '国家税务总局武汉市东西湖区税务局': '东西湖',
+            '国家税务总局武汉市蔡甸区税务局': '蔡甸',
+            '国家税务总局武汉市江夏区税务局': '江夏',
+            '国家税务总局武汉市黄陂区税务局': '黄陂',
+            '国家税务总局武汉市新洲区税务局': '新洲',
+            '国家税务总局武汉市东湖生态旅游风景区税务局': '风景区',
+            '国家税务总局武汉长江新区税务局': '长江新区',
+            '国家税务总局武汉市税务局武汉化学工业区税务分局': '化工'
+        }
+
+        # 机关显示顺序（按指定顺序）
+        self.dept_display_order = [
+            '国家税务总局武汉市江岸区税务局',
+            '国家税务总局武汉市江汉区税务局',
+            '国家税务总局武汉市硚口区税务局',
+            '国家税务总局武汉市汉阳区税务局',
+            '国家税务总局武汉市武昌区税务局',
+            '国家税务总局武汉市青山区税务局',
+            '国家税务总局武汉东湖新技术开发区税务局',
+            '国家税务总局武汉经济技术开发区（汉南区）税务局',
+            '国家税务总局武汉市洪山区税务局',
+            '国家税务总局武汉市东西湖区税务局',
+            '国家税务总局武汉市蔡甸区税务局',
+            '国家税务总局武汉市江夏区税务局',
+            '国家税务总局武汉市黄陂区税务局',
+            '国家税务总局武汉市新洲区税务局',
+            '国家税务总局武汉长江新区税务局',
+            '国家税务总局武汉市税务局武汉化学工业区税务分局'
+        ]
+
+        # 需要隐藏的机关（已裁撤）
+        self.hidden_depts = ['国家税务总局武汉市东湖生态旅游风景区税务局']
+
         if history_df is not None and new_tasks_df is not None:
             self._preprocess_data()
             self.personnel_stats = self._calculate_personnel_stats()
@@ -771,9 +815,9 @@ class TaskAllocatorUI:
         info_frame = ttk.LabelFrame(settings_frame, text="系统信息", padding=10)
         info_frame.pack(fill=tk.X, pady=5, padx=10)
 
-        ttk.Label(info_frame, text="版本: 2.0").pack(anchor=tk.W)
+        ttk.Label(info_frame, text="版本: 2.0.1").pack(anchor=tk.W)
         ttk.Label(info_frame, text="开发者: 智能分配系统").pack(anchor=tk.W)
-        ttk.Label(info_frame, text="更新时间: 2024").pack(anchor=tk.W)
+        ttk.Label(info_frame, text="更新时间: 2026").pack(anchor=tk.W)
 
     def load_sample_data(self):
         """加载示例数据"""
@@ -956,7 +1000,7 @@ class TaskAllocatorUI:
 
         task_count = len(self.new_tasks_df)
         confirm_msg = f"确定要执行智能分配吗？\n\n将要分配 {task_count} 个新任务"
-        
+
         if messagebox.askyesno("确认操作", confirm_msg):
             self.run_allocation()
 
@@ -1117,11 +1161,17 @@ class TaskAllocatorUI:
                 widget.destroy()
 
             # 负载分布图
-            fig1, ax1 = plt.subplots(figsize=(6, 4))
-            depts = list(self.allocator.system_load['dept_load'].keys())
+            fig1, ax1 = plt.subplots(figsize=(8, 5))
+            # 按指定顺序获取机关，并过滤隐藏的机关
+            depts_ordered = []
+            for dept in self.allocator.dept_display_order:
+                if dept in self.allocator.system_load['dept_load'] and dept not in self.allocator.hidden_depts:
+                    depts_ordered.append(dept)
 
-            if depts:
-                loads = [self.allocator.system_load['dept_load'][d]['load_percentage'] for d in depts]
+            if depts_ordered:
+                loads = [self.allocator.system_load['dept_load'][d]['load_percentage'] for d in depts_ordered]
+                # 使用简称显示
+                depts_display = [self.allocator.dept_name_mapping.get(dept, dept) for dept in depts_ordered]
 
                 colors = []
                 for load in loads:
@@ -1132,24 +1182,24 @@ class TaskAllocatorUI:
                     else:
                         colors.append(self.danger_color)
 
-                bars = ax1.bar(depts, loads, color=colors)
+                bars = ax1.bar(depts_display, loads, color=colors)
                 ax1.set_title('各机关负载情况')
                 ax1.set_ylabel('负载率 (%)')
                 ax1.set_ylim(0, 100)
                 ax1.axhline(y=90, color='red', linestyle='--', alpha=0.5, label='警戒线')
                 ax1.legend()
 
-                # 旋转横轴标签以避免重叠
-                ax1.set_xticklabels(depts, rotation=45, ha='right')
+                # 简称字数少，改为纵向排列
+                ax1.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
 
                 # 添加数值标签
                 for bar in bars:
                     height = bar.get_height()
                     ax1.text(bar.get_x() + bar.get_width() / 2., height + 1,
-                             f'{height:.1f}%', ha='center', va='bottom', fontsize=8)
+                             f'{height:.1f}%', ha='center', va='bottom', fontsize=9)
 
-                # 调整布局以避免标签被截断
-                plt.tight_layout()
+                # 调整布局，底部留出空间给纵向标签
+                plt.subplots_adjust(bottom=0.25, top=0.92)
             else:
                 ax1.text(0.5, 0.5, '暂无负载数据', ha='center', va='center')
 
@@ -1202,17 +1252,24 @@ class TaskAllocatorUI:
             for widget in self.analysis_canvas.winfo_children():
                 widget.destroy()
 
-            fig, ax = plt.subplots(figsize=(10, 6))
+            fig, ax = plt.subplots(figsize=(12, 7))
 
             if analysis_type == "load_distribution":
                 # 负载分布
-                depts = list(self.allocator.system_load['dept_load'].keys())
-                if depts:
-                    loads = [self.allocator.system_load['dept_load'][d]['load_percentage'] for d in depts]
+                # 按指定顺序获取机关，并过滤隐藏的机关
+                depts_ordered = []
+                for dept in self.allocator.dept_display_order:
+                    if dept in self.allocator.system_load['dept_load'] and dept not in self.allocator.hidden_depts:
+                        depts_ordered.append(dept)
+
+                if depts_ordered:
+                    loads = [self.allocator.system_load['dept_load'][d]['load_percentage'] for d in depts_ordered]
+                    # 使用简称显示
+                    depts_display = [self.allocator.dept_name_mapping.get(dept, dept) for dept in depts_ordered]
 
                     # 创建颜色映射
                     colors = plt.cm.RdYlGn_r(np.array(loads) / 100)
-                    bars = ax.bar(depts, loads, color=colors)
+                    bars = ax.bar(depts_display, loads, color=colors)
 
                     ax.set_title('机关负载分布')
                     ax.set_ylabel('负载率 (%)')
@@ -1220,40 +1277,44 @@ class TaskAllocatorUI:
                     ax.axhline(y=90, color='red', linestyle='--', alpha=0.7, label='警戒线')
                     ax.legend()
 
-                    # 旋转横轴标签以避免重叠
-                    ax.set_xticklabels(depts, rotation=45, ha='right')
+                    # 简称字数少，改为纵向排列
+                    ax.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
 
                     # 添加数值标签
                     for bar in bars:
                         height = bar.get_height()
                         ax.text(bar.get_x() + bar.get_width() / 2., height + 1,
-                                f'{height:.1f}%', ha='center', va='bottom')
+                                f'{height:.1f}%', ha='center', va='bottom', fontsize=9)
 
-                    # 调整布局
-                    plt.tight_layout()
+                    # 调整布局，底部留出空间给纵向标签
+                    plt.subplots_adjust(bottom=0.25, top=0.92)
                 else:
                     ax.text(0.5, 0.5, '暂无机关负载数据', ha='center', va='center')
 
             elif analysis_type == "dept_efficiency":
                 """机关处理效率分析"""
-                depts = list(self.allocator.dept_stats.keys())
-                if depts:
+                # 按指定顺序获取机关，并过滤隐藏的机关
+                depts_ordered = []
+                for dept in self.allocator.dept_display_order:
+                    if dept in self.allocator.dept_stats and dept not in self.allocator.hidden_depts:
+                        depts_ordered.append(dept)
+
+                if depts_ordered:
                     # 获取机关处理时间（转换为天）
                     avg_process_days = []
                     completion_rates = []
 
-                    for dept in depts:
+                    for dept in depts_ordered:
                         stats = self.allocator.dept_stats[dept]
                         # 将小时转换为天
                         avg_days = stats['avg_process_time'] / 24  # 小时转换为天
                         avg_process_days.append(avg_days)
                         completion_rates.append(stats['completion_rate'] * 100)
 
-                    # 只显示前10个机关
-                    display_count = min(10, len(depts))
-                    depts_display = depts[:display_count]
-                    avg_days_display = avg_process_days[:display_count]
-                    completion_rates_display = completion_rates[:display_count]
+                    # 显示所有机关（使用简称）
+                    depts_display = [self.allocator.dept_name_mapping.get(dept, dept) for dept in depts_ordered]
+                    avg_days_display = avg_process_days
+                    completion_rates_display = completion_rates
 
                     x = np.arange(len(depts_display))
                     width = 0.35
@@ -1274,19 +1335,20 @@ class TaskAllocatorUI:
                     ax.set_ylabel('平均处理时间 (天)', color='skyblue')
                     ax1.set_ylabel('完成率 (%)', color='orange')
                     ax.set_xticks(x)
-                    ax.set_xticklabels(depts_display, rotation=45, ha='right')
+                    # 简称字数少，改为纵向排列
+                    ax.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
                     ax.set_title('机关处理效率分析')
 
                     # 设置y轴范围
                     ax.set_ylim(0, max(avg_days_display) * 1.2 if avg_days_display else 10)
                     ax1.set_ylim(0, 110)
 
-                    # 合并图例并移到图表外部
+                    # 合并图例并移到图表上方
                     bars1_line = [bars1]
                     lines1 = ax.get_legend_handles_labels()[0]
                     lines2 = ax1.get_legend_handles_labels()[0]
                     ax.legend(lines1 + lines2, ['平均处理时间(天)', '完成率(%)'],
-                             loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
+                             loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
 
                     # 添加数值标签
                     for bar in bars1:
@@ -1296,18 +1358,26 @@ class TaskAllocatorUI:
 
                     for i, v in enumerate(completion_rates_display):
                         ax1.text(i + width / 2, v + 2, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
+
+                    # 调整布局，底部留出空间给纵向标签
+                    plt.subplots_adjust(bottom=0.25, top=0.85)
                 else:
                     ax.text(0.5, 0.5, '暂无机关效率数据', ha='center', va='center')
 
             elif analysis_type == "personnel_config":
                 """各机关人员数量及当前负载分析"""
-                depts = list(self.allocator.dept_stats.keys())
-                if depts:
+                # 按指定顺序获取机关，并过滤隐藏的机关
+                depts_ordered = []
+                for dept in self.allocator.dept_display_order:
+                    if dept in self.allocator.dept_stats and dept not in self.allocator.hidden_depts:
+                        depts_ordered.append(dept)
+
+                if depts_ordered:
                     # 获取各机关的人员数量和平均负载
                     personnel_counts = []
                     avg_loads = []
 
-                    for dept in depts:
+                    for dept in depts_ordered:
                         stats = self.allocator.dept_stats[dept]
                         personnel_counts.append(stats['personnel_count'])
 
@@ -1319,11 +1389,10 @@ class TaskAllocatorUI:
                         else:
                             avg_loads.append(0)
 
-                    # 只显示前8个机关
-                    display_count = min(8, len(depts))
-                    depts_display = depts[:display_count]
-                    personnel_display = personnel_counts[:display_count]
-                    avg_loads_display = avg_loads[:display_count]
+                    # 显示所有机关（使用简称）
+                    depts_display = [self.allocator.dept_name_mapping.get(dept, dept) for dept in depts_ordered]
+                    personnel_display = personnel_counts
+                    avg_loads_display = avg_loads
 
                     x = np.arange(len(depts_display))
                     width = 0.35
@@ -1344,7 +1413,8 @@ class TaskAllocatorUI:
                     ax.set_ylabel('人员数量', color='lightgreen')
                     ax1.set_ylabel('平均负载率 (%)', color='coral')
                     ax.set_xticks(x)
-                    ax.set_xticklabels(depts_display, rotation=45, ha='right')
+                    # 简称字数少，改为纵向排列
+                    ax.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
                     ax.set_title('机关人员配置及负载分析')
 
                     # 设置y轴范围
@@ -1352,12 +1422,12 @@ class TaskAllocatorUI:
                         ax.set_ylim(0, max(personnel_display) * 1.2)
                     ax1.set_ylim(0, 110)
 
-                    # 合并图例并移到图表外部
+                    # 合并图例并移到图表上方
                     bars1_line = [bars1]
                     lines1 = ax.get_legend_handles_labels()[0]
                     lines2 = ax1.get_legend_handles_labels()[0]
                     ax.legend(lines1 + lines2, ['人员数量', '平均负载率(%)'],
-                             loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
+                             loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=2)
 
                     # 添加数值标签
                     for bar in bars1:
@@ -1367,6 +1437,9 @@ class TaskAllocatorUI:
 
                     for i, v in enumerate(avg_loads_display):
                         ax1.text(i + width / 2, v + 2, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
+
+                    # 调整布局，底部留出空间给纵向标签
+                    plt.subplots_adjust(bottom=0.25, top=0.85)
                 else:
                     ax.text(0.5, 0.5, '暂无机关人员配置数据', ha='center', va='center')
 
@@ -1458,7 +1531,7 @@ class TaskAllocatorUI:
 {'=' * 50}
 
 报告时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-系统版本: 2.0
+系统版本: 2.0.1
 
 一、系统状态概览
 系统负载率: {self.allocator.system_load['system_load_percentage']:.1f}%
