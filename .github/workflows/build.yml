@@ -1,76 +1,53 @@
-name: 自动打包双平台（macOS + Win7 SP1）
+name: Build
 
-# 触发条件：向main分支提交代码时，自动运行双平台打包
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
-# 定义双平台打包任务（并行执行，互不干扰）
 jobs:
-  # 任务1：打包macOS可执行文件
-  build-macos-app:
-    # 云端运行环境：macOS最新版本
+  build-macos:
     runs-on: macos-latest
     steps:
-      # 步骤1：检出仓库代码（云端获取单文件脚本和依赖配置）
-      - name: 检出仓库代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 步骤2：配置Python 3.7环境
-      - name: 配置Python 3.7环境（macOS）
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.7'
-          architecture: 'x64'
+          python-version: '3.11'
 
-      # 步骤3：安装项目依赖和PyInstaller 4.0
-      - name: 安装依赖和PyInstaller 4.0
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+          pip install pandas numpy matplotlib seaborn pyinstaller
 
-      # 步骤4：执行PyInstaller打包（单文件，生成macOS可执行文件）
-      - name: 打包生成macOS可执行文件
-        run: pyinstaller -F task2.py  # 改为实际的单文件脚本名
-        # 说明：-F 生成单个独立可执行文件，macOS下产物位于dist/目录，无后缀（可直接运行）
+      - name: Build
+        run: pyinstaller -F main.py
 
-      # 步骤5：上传macOS产物（供下载，保留90天）
-      - name: 上传macOS可执行产物
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: macOS-Executable-File
+          name: macos-app
           path: dist/
 
-  # 任务2：打包Win7 SP1（无KB2533623）兼容EXE
-  build-win7-exe:
-    # 云端运行环境：Windows最新版本（打包产物兼容Win7 SP1，无KB2533623）
+  build-windows:
     runs-on: windows-latest
     steps:
-      # 步骤1：检出仓库代码
-      - name: 检出仓库代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 步骤2：配置Python 3.7环境（规避KB2533623补丁依赖）
-      - name: 配置Python 3.7环境（Windows）
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.7'
-          architecture: 'x64'  # 可选：x64（64位Win7）/ x86（32位Win7），按需修改
 
-      # 步骤3：安装项目依赖和PyInstaller 4.0
-      - name: 安装依赖和PyInstaller 4.0
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          if (Test-Path "requirements.txt") { pip install -r requirements.txt }
+          python -m pip install pip==21.2.4
+          python -m pip install setuptools==59.6.0
+          python -m pip install wheel==0.37.1
+          pip install -r requirements.txt
+          pip install pyinstaller==4.10
 
-      # 步骤4：执行PyInstaller打包（单文件，Win7兼容）
-      - name: 打包生成Win7 SP1兼容EXE
-        run: pyinstaller -F -w task2.py  # 【必改】替换为你的单文件脚本名
-        # 说明：-F 单个EXE，-w 隐藏控制台（GUI项目适用），控制台项目可删除-w
+      - name: Build
+        run: pyinstaller -F -w main.py
 
-      # 步骤5：上传Win7 EXE产物
-      - name: 上传Win7 SP1兼容EXE
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: Win7-EXE-No-KB2533623
+          name: windows-exe
           path: dist/
