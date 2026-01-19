@@ -1206,11 +1206,9 @@ class TaskAllocatorUI:
                 ax1.axhline(y=90, color='red', linestyle='--', alpha=0.5, label='警戒线')
                 ax1.legend()
 
-                # 横轴标签使用textpath实现汉字竖排
+                # 横轴标签横向显示
                 ax1.set_xticks(range(len(depts_display)))
-                ax1.set_xticklabels([])
-                for i, label in enumerate(depts_display):
-                    ax1.text(i, -0.15, label, rotation=0, ha='center', va='top', fontsize=9)
+                ax1.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
 
                 # 添加数值标签
                 for bar in bars:
@@ -1297,8 +1295,8 @@ class TaskAllocatorUI:
                     ax.axhline(y=90, color='red', linestyle='--', alpha=0.7, label='警戒线')
                     ax.legend()
 
-                    # 简称字数少，改为纵向排列
-                    ax.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
+                    # 横轴标签横向显示
+                    ax.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
 
                     # 添加数值标签
                     for bar in bars:
@@ -1355,8 +1353,8 @@ class TaskAllocatorUI:
                     ax.set_ylabel('平均处理时间 (天)', color='skyblue')
                     ax1.set_ylabel('完成率 (%)', color='orange')
                     ax.set_xticks(x)
-                    # 简称字数少，改为纵向排列
-                    ax.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
+                    # 横轴标签横向显示
+                    ax.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
                     ax.set_title('机关处理效率分析')
 
                     # 设置y轴范围
@@ -1421,7 +1419,7 @@ class TaskAllocatorUI:
                     ax1 = ax.twinx()
 
                     # 柱状图：人员数量
-                    bars1 = ax.bar(x - width / 2, personnel_display, width,
+                    bars1 = ax.bar(x, personnel_display, width,
                                    label='人员数量', color='lightgreen')
 
                     # 折线图：平均负载率（使用相同的x坐标对齐）
@@ -1433,8 +1431,8 @@ class TaskAllocatorUI:
                     ax.set_ylabel('人员数量', color='lightgreen')
                     ax1.set_ylabel('平均负载率 (%)', color='coral')
                     ax.set_xticks(x)
-                    # 简称字数少，改为纵向排列
-                    ax.set_xticklabels(depts_display, rotation=90, ha='center', fontsize=9)
+                    # 横轴标签横向显示
+                    ax.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
                     ax.set_title('机关人员配置及负载分析')
 
                     # 设置y轴范围
@@ -1456,7 +1454,7 @@ class TaskAllocatorUI:
                                 f'{int(height)}人', ha='center', va='bottom', fontsize=9)
 
                     for i, v in enumerate(avg_loads_display):
-                        ax1.text(i + width / 2, v + 2, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
+                        ax1.text(i, v + 2, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
 
                     # 调整布局，底部留出空间给纵向标签
                     plt.subplots_adjust(bottom=0.25, top=0.85)
