@@ -1207,7 +1207,7 @@ class TaskAllocatorUI:
                 ax1.legend()
 
                 ax1.set_xticks(range(len(depts_display)))
-                ax1.set_xticklabels(depts_display, rotation=45, ha='right')
+                ax1.set_xticklabels(depts_display, rotation=45)
 
                 # 添加数值标签
                 for bar in bars:
