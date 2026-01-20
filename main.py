@@ -1178,7 +1178,7 @@ class TaskAllocatorUI:
                 widget.destroy()
 
             # 负载分布图
-            fig1, ax1 = plt.subplots(figsize=(8, 5))
+            fig1, ax1 = plt.subplots(figsize=(5,3))
             # 按指定顺序获取机关，并过滤隐藏的机关
             depts_ordered = []
             for dept in self.allocator.dept_display_order:
@@ -1208,7 +1208,7 @@ class TaskAllocatorUI:
 
                 # 横轴标签横向显示
                 ax1.set_xticks(range(len(depts_display)))
-                ax1.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
+                ax1.set_xticklabels(depts_display, rotation=0, ha='center', va='center', fontsize=9)
 
                 # 添加数值标签
                 for bar in bars:
@@ -1296,7 +1296,8 @@ class TaskAllocatorUI:
                     ax.legend()
 
                     # 横轴标签横向显示
-                    ax.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
+                    ax.set_xticks(range(len(depts_display)))
+                    ax.set_xticklabels(depts_display, rotation=0, ha='center', va='center', fontsize=9)
 
                     # 添加数值标签
                     for bar in bars:
@@ -1354,7 +1355,7 @@ class TaskAllocatorUI:
                     ax1.set_ylabel('完成率 (%)', color='orange')
                     ax.set_xticks(x)
                     # 横轴标签横向显示
-                    ax.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
+                    ax.set_xticklabels(depts_display, rotation=0, ha='center', va='center', fontsize=9)
                     ax.set_title('机关处理效率分析')
 
                     # 设置y轴范围
@@ -1432,7 +1433,7 @@ class TaskAllocatorUI:
                     ax1.set_ylabel('平均负载率 (%)', color='coral')
                     ax.set_xticks(x)
                     # 横轴标签横向显示
-                    ax.set_xticklabels(depts_display, rotation=0, ha='center', fontsize=9)
+                    ax.set_xticklabels(depts_display, rotation=0, ha='center', va='center', fontsize=9)
                     ax.set_title('机关人员配置及负载分析')
 
                     # 设置y轴范围
