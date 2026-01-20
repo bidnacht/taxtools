@@ -1207,7 +1207,7 @@ class TaskAllocatorUI:
                 ax1.legend()
 
                 ax1.set_xticks(range(len(depts_display)))
-                ax1.set_xticklabels(depts_display, rotation=0)
+                ax1.set_xticklabels(depts_display, rotation=45, ha='right')
 
                 # 添加数值标签
                 for bar in bars:
@@ -1295,7 +1295,7 @@ class TaskAllocatorUI:
                     ax.legend()
 
                     ax.set_xticks(range(len(depts_display)))
-                    ax.set_xticklabels(depts_display, rotation=0)
+                    ax.set_xticklabels(depts_display)
 
                     # 添加数值标签
                     for bar in bars:
@@ -1352,7 +1352,7 @@ class TaskAllocatorUI:
                     ax.set_ylabel('平均处理时间 (天)', color='skyblue')
                     ax1.set_ylabel('完成率 (%)', color='orange')
                     ax.set_xticks(x)
-                    ax.set_xticklabels(depts_display, rotation=0)
+                    ax.set_xticklabels(depts_display)
                     ax.set_title('机关处理效率分析')
 
                     # 设置y轴范围
@@ -1429,7 +1429,7 @@ class TaskAllocatorUI:
                     ax.set_ylabel('人员数量', color='lightgreen')
                     ax1.set_ylabel('平均负载率 (%)', color='coral')
                     ax.set_xticks(x)
-                    ax.set_xticklabels(depts_display, rotation=0)
+                    ax.set_xticklabels(depts_display)
                     ax.set_title('机关人员配置及负载分析')
 
                     # 设置y轴范围
