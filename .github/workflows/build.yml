@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [new-tool]
+    branches: [tax-data-processor]
 
 jobs:
   build-windows:
