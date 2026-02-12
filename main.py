@@ -17,6 +17,10 @@ class TaxDataProcessor:
         self.previous_table = None
         self.current_table = None
 
+        # ========== 新增：往年一分局名单主表相关属性 ==========
+        self.first_bureau_match_path = None          # 存储文件路径
+        self.first_bureau_match_df = None            # 存储加载后的DataFrame（仅保留关键列）
+
         # 缓存替换字典 - 优化为元组列表便于迭代
         self.replacement_patterns = [
             ('武汉东湖新技术开发区税务', '东湖'),
@@ -93,6 +97,16 @@ class TaxDataProcessor:
         current_frame = tk.Frame(self.root)
         current_frame.pack(pady=5, fill="x", padx=20)
 
+        # ========== 新增：往年一分局名单主表选择 ==========
+        match_frame = tk.Frame(self.root)
+        match_frame.pack(pady=5, fill="x", padx=20)
+
+        tk.Label(match_frame, text="选择往年一分局名单主表:").pack(side="left")
+        self.match_file_label = tk.Label(match_frame, text="未选择文件（可选）", fg="gray")
+        self.match_file_label.pack(side="left", padx=10)
+        tk.Button(match_frame, text="选择文件", command=self.select_first_bureau_match_file).pack(side="right")
+        # ==================================================
+
         tk.Label(current_frame, text="选择今年入库表:").pack(side="left")
         self.current_file_label = tk.Label(current_frame, text="未选择文件", fg="red")
         self.current_file_label.pack(side="left", padx=10)
@@ -158,6 +172,16 @@ class TaxDataProcessor:
         if filename:
             self.current_file_label.config(text=os.path.basename(filename), fg="green")
             self.current_table_path = filename
+
+    def select_first_bureau_match_file(self):
+                """选择往年一分局名单主表"""
+                filename = filedialog.askopenfilename(
+                    title="选择往年一分局名单主表",
+                    filetypes=[("Excel files", "*.xlsx *.xls")]
+                )
+                if filename:
+                    self.match_file_label.config(text=os.path.basename(filename), fg="green")
+                    self.first_bureau_match_path = filename
 
     def load_and_preprocess_table(self, file_path):
         """加载并预处理表格，删除前两行，优化内存使用"""
@@ -579,6 +603,24 @@ class TaxDataProcessor:
         self.log_message(f"  - 统计调减收入总计: {current_df['统计调减收入'].sum():.2f}")
         self.log_message(f"  - 今年入库统计总额: {current_df['今年入库统计总额'].sum():.2f}")
 
+        if self.first_bureau_match_df is not None and not self.first_bureau_match_df.empty:
+            self.log_message("开始根据往年一分局名单强制标记今年入库表...")
+            # 确保存在必要的列
+            if '任务批次名称' in current_df.columns and '纳税人名称' in current_df.columns and '所属区局' in current_df.columns:
+                # 创建匹配标记（两列同时匹配）
+                match_condition = current_df.set_index(['任务批次名称', '纳税人名称']).index.isin(
+                    self.first_bureau_match_df.set_index(['任务批次名称', '纳税人名称']).index
+                )
+                matched_count = match_condition.sum()
+                if matched_count > 0:
+                    # 将匹配到的行所属区局强制改为"一分局"
+                    current_df.loc[match_condition, '所属区局'] = '一分局'
+                    self.log_message(f"已强制将 {matched_count} 条今年入库记录的所属区局标记为'一分局'")
+                else:
+                    self.log_message("今年入库表中没有与往年一分局名单匹配的记录")
+            else:
+                self.log_message("警告：今年入库表中缺少必要的列（任务批次名称/纳税人名称/所属区局），无法进行强制标记")
+        # =================================================================
         return current_df
 
     def create_summary_sheet(self, main_df, current_df, title="统计汇总"):
@@ -1043,7 +1085,26 @@ class TaxDataProcessor:
             self.progress['value'] = 60
             self.status_label.config(text="过滤和排序主表数据...")
             main_df = self.filter_and_sort_by_district_order(main_df)
-
+            # ========== 新增：加载往年一分局名单主表 ==========
+            self.first_bureau_match_df = None
+            if hasattr(self, 'first_bureau_match_path') and self.first_bureau_match_path:
+                self.progress['value'] = 67
+                self.status_label.config(text="加载往年一分局名单主表...")
+                try:
+                    match_df = self.load_and_preprocess_table(self.first_bureau_match_path)
+                    # 只保留必要的两列，并去重
+                    if '任务批次名称' in match_df.columns and '纳税人名称' in match_df.columns:
+                        self.first_bureau_match_df = match_df[['任务批次名称', '纳税人名称']].drop_duplicates()
+                        self.log_message(f"往年一分局名单主表加载成功，共 {len(self.first_bureau_match_df)} 条唯一记录")
+                    else:
+                        self.log_message("错误：往年一分局名单主表中缺少必要的列（任务批次名称/纳税人名称）")
+                        self.first_bureau_match_df = None
+                except Exception as e:
+                    self.log_message(f"加载往年一分局名单主表失败: {str(e)}")
+                    self.first_bureau_match_df = None
+            else:
+                self.log_message("未选择往年一分局名单主表，跳过强制标记一分局步骤")
+            # ==================================================
             # 5. 处理今年入库表
             self.progress['value'] = 70
             self.status_label.config(text="处理今年入库表...")
