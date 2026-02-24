@@ -257,7 +257,7 @@ class TaxDataProcessor:
                     if converted.dtype != 'object':  # 如果转换成功
                         df[col] = converted
                         # 转换为float32以确保小数点
-                        df[col] = df[col].astype('float32')
+                        df[col] = df[col].astype('float64')
                 except:
                     pass
 
@@ -270,14 +270,14 @@ class TaxDataProcessor:
                                '今年入库金额', '今年非税收入', '今年调减收入', '今年入库统计总额']:
                         df[col] = df[col].astype('float64')
                     else:
-                        df[col] = df[col].astype('float32')
+                        df[col] = df[col].astype('float64')
                 # 对于整数列，如果有小数可能，转换为float32
                 elif pd.api.types.is_integer_dtype(df[col]):
                     # 检查列名是否可能包含金额数据
                     money_keywords = ['金额', '收入', '税额', '合计', '总计', '税款', '入库']
                     col_name = str(col).lower()
                     if any(keyword in col_name for keyword in money_keywords):
-                        df[col] = df[col].astype('float32')
+                        df[col] = df[col].astype('float64')
 
         return df
     def filter_and_sort_by_district_order(self, df, district_col='所属区局'):
@@ -569,6 +569,24 @@ class TaxDataProcessor:
                 return district
 
             current_df['所属区局'] = current_df['所属区局'].apply(replace_district)
+            if self.first_bureau_match_df is not None and not self.first_bureau_match_df.empty:
+                self.log_message("开始根据往年一分局名单强制标记今年入库表...")
+                # 确保存在必要的列
+                if '任务批次名称' in current_df.columns and '纳税人名称' in current_df.columns and '所属区局' in current_df.columns:
+                    # 创建匹配标记（两列同时匹配）
+                    match_condition = current_df.set_index(['任务批次名称', '纳税人名称']).index.isin(
+                        self.first_bureau_match_df.set_index(['任务批次名称', '纳税人名称']).index
+                    )
+                    matched_count = match_condition.sum()
+                    if matched_count > 0:
+                        # 将匹配到的行所属区局强制改为"一分局"
+                        current_df.loc[match_condition, '所属区局'] = '一分局'
+                        self.log_message(f"已强制将 {matched_count} 条今年入库记录的所属区局标记为'一分局'")
+                    else:
+                        self.log_message("今年入库表中没有与往年一分局名单匹配的记录")
+                else:
+                    self.log_message("警告：今年入库表中缺少必要的列（任务批次名称/纳税人名称/所属区局），无法进行强制标记")
+            # =================================================================
 
         # 删除中间列
         cols_to_drop = [col for col in ['split_col2', 'split_col3'] if col in current_df.columns]
@@ -603,24 +621,7 @@ class TaxDataProcessor:
         self.log_message(f"  - 统计调减收入总计: {current_df['统计调减收入'].sum():.2f}")
         self.log_message(f"  - 今年入库统计总额: {current_df['今年入库统计总额'].sum():.2f}")
 
-        if self.first_bureau_match_df is not None and not self.first_bureau_match_df.empty:
-            self.log_message("开始根据往年一分局名单强制标记今年入库表...")
-            # 确保存在必要的列
-            if '任务批次名称' in current_df.columns and '纳税人名称' in current_df.columns and '所属区局' in current_df.columns:
-                # 创建匹配标记（两列同时匹配）
-                match_condition = current_df.set_index(['任务批次名称', '纳税人名称']).index.isin(
-                    self.first_bureau_match_df.set_index(['任务批次名称', '纳税人名称']).index
-                )
-                matched_count = match_condition.sum()
-                if matched_count > 0:
-                    # 将匹配到的行所属区局强制改为"一分局"
-                    current_df.loc[match_condition, '所属区局'] = '一分局'
-                    self.log_message(f"已强制将 {matched_count} 条今年入库记录的所属区局标记为'一分局'")
-                else:
-                    self.log_message("今年入库表中没有与往年一分局名单匹配的记录")
-            else:
-                self.log_message("警告：今年入库表中缺少必要的列（任务批次名称/纳税人名称/所属区局），无法进行强制标记")
-        # =================================================================
+
         return current_df
 
     def create_summary_sheet(self, main_df, current_df, title="统计汇总"):
