@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [tax-data-processor]
+    if: false
 
 jobs:
   build-windows:
