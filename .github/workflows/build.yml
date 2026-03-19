@@ -1,9 +1,8 @@
 name: Build
 
-on:
-  push:
-    branches: [tax-data-processor]
-    if: false
+# on:
+#   push:
+#     branches: [tax-data-processor]
 
 jobs:
   build-windows:
