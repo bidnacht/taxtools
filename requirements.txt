@@ -1,0 +1,6 @@
+pandas
+networkx
+matplotlib
+python-louvain
+pyvis
+PyQt5
