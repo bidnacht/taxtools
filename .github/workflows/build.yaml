@@ -33,7 +33,7 @@ jobs:
         pip install pyinstaller==4.10
     
     - name: Build
-      run: pyinstaller -F -w --hidden-import=pandas._libs.tslibs.timedeltas --hidden-import=pandas._libs.tslibs.np_datetime --hidden-import=pandas._libs.tslibs.nattype --hidden-import=pandas._libs.skiplist main.py
+      run: pyinstaller -F -w main.py
     
     - uses: actions/upload-artifact@v4
       with:

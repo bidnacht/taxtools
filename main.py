@@ -1,4 +1,3 @@
-import pandas as pd
 import os
 from itertools import combinations
 import networkx as nx
@@ -8,6 +7,8 @@ import argparse
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QPushButton, QLabel, QComboBox, QCheckBox, QLineEdit, QVBoxLayout, QHBoxLayout, QWidget, QScrollArea, QMessageBox
 import sys
 import difflib
+import csv
+import json
 
 class AssociationAnalyzer:
     def __init__(self, file_path=None, main_entity=None, dimensions=None, weights=None, similarity_dimensions=None):
@@ -22,19 +23,27 @@ class AssociationAnalyzer:
     
     def calculate_similarity(self, str1, str2):
         """计算两个字符串的相似度"""
-        if pd.isna(str1) or pd.isna(str2):
+        if str1 is None or str2 is None or str1 == '' or str2 == '':
             return 0.0
         return difflib.SequenceMatcher(None, str(str1), str(str2)).ratio()
     
     def load_data(self):
         try:
             if self.file_path.endswith('.csv') or self.file_path.endswith('.txt'):
-                self.df = pd.read_csv(self.file_path)
+                # 使用csv模块读取CSV/TXT文件
+                with open(self.file_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    self.df = list(reader)
+                    if not self.df:
+                        print("文件为空")
+                        return False
+                    columns = list(self.df[0].keys())
+                    print(f"成功加载文件: {os.path.basename(self.file_path)}")
+                    print(f"数据列: {columns}")
+                    print(f"数据行数: {len(self.df)}")
             else:
-                self.df = pd.read_excel(self.file_path)
-            print(f"成功加载文件: {os.path.basename(self.file_path)}")
-            print(f"数据列: {list(self.df.columns)}")
-            print(f"数据行数: {len(self.df)}")
+                print("仅支持CSV和TXT文件格式")
+                return False
         except Exception as e:
             print(f"读取文件失败: {e}")
             return False
@@ -50,7 +59,12 @@ class AssociationAnalyzer:
             
             if dim_col in self.similarity_dimensions:
                 # 基于相似度的关联
-                entities_with_values = self.df[self.df[dim_col].notna()][[self.main_entity, dim_col]].values.tolist()
+                entities_with_values = []
+                for row in self.df:
+                    val = row.get(dim_col)
+                    ent = row.get(self.main_entity)
+                    if val and ent:
+                        entities_with_values.append((ent, val))
                 
                 # 计算所有实体对之间的相似度
                 for j, (ent1, val1) in enumerate(entities_with_values):
@@ -83,9 +97,18 @@ class AssociationAnalyzer:
                                 })
             else:
                 # 精确匹配的关联
-                grouped = self.df[self.df[dim_col].notna()].groupby(dim_col)[self.main_entity].unique()
+                # 手动分组
+                grouped = {}
+                for row in self.df:
+                    val = row.get(dim_col)
+                    ent = row.get(self.main_entity)
+                    if val and ent:
+                        if val not in grouped:
+                            grouped[val] = set()
+                        grouped[val].add(ent)
                 
                 for bridge_value, entities in grouped.items():
+                    entities = list(entities)
                     if len(entities) > 1:
                         # 提取关联点
                         for ent in entities:
@@ -237,15 +260,46 @@ class AssociationAnalyzer:
                 "关联类型": ",".join(set(attrs.get('types', []))),
                 "关联点": "|".join(set(map(str, attrs.get('bridges', []))))
             })
-        pd.DataFrame(edge_data).to_csv(f"{output_dir}/关联企业明细表.csv", index=False, encoding='utf_8_sig')
+        
+        # 写入CSV文件
+        with open(f"{output_dir}/关联企业明细表.csv", 'w', newline='', encoding='utf_8_sig') as f:
+            if edge_data:
+                writer = csv.DictWriter(f, fieldnames=edge_data[0].keys())
+                writer.writeheader()
+                writer.writerows(edge_data)
         
         # 2. 核心关联点摘要
-        bridge_df = pd.DataFrame(bridge_list)
-        bridge_summary = bridge_df.groupby(['关联点内容', '关联点维度']).agg({
-            '涉及主体': lambda x: ",".join(set(x)),
-            '关联点内容': 'count'
-        }).rename(columns={'关联点内容': '出现次数'}).sort_values('出现次数', ascending=False)
-        bridge_summary.to_csv(f"{output_dir}/核心关联点摘要.csv", encoding='utf_8_sig')
+        # 手动分组和聚合
+        bridge_summary = {}
+        for bridge in bridge_list:
+            key = (bridge['关联点内容'], bridge['关联点维度'])
+            if key not in bridge_summary:
+                bridge_summary[key] = {
+                    '涉及主体': set(),
+                    '出现次数': 0
+                }
+            bridge_summary[key]['涉及主体'].add(bridge['涉及主体'])
+            bridge_summary[key]['出现次数'] += 1
+        
+        # 转换为列表并排序
+        bridge_summary_list = []
+        for (content, dim), data in bridge_summary.items():
+            bridge_summary_list.append({
+                '关联点内容': content,
+                '关联点维度': dim,
+                '涉及主体': ",".join(data['涉及主体']),
+                '出现次数': data['出现次数']
+            })
+        
+        # 按出现次数排序
+        bridge_summary_list.sort(key=lambda x: x['出现次数'], reverse=True)
+        
+        # 写入CSV文件
+        with open(f"{output_dir}/核心关联点摘要.csv", 'w', newline='', encoding='utf_8_sig') as f:
+            if bridge_summary_list:
+                writer = csv.DictWriter(f, fieldnames=bridge_summary_list[0].keys())
+                writer.writeheader()
+                writer.writerows(bridge_summary_list)
         
         # 3. 企业关联分析报告
         node_data = []
@@ -257,7 +311,13 @@ class AssociationAnalyzer:
                 "中介中心性": attrs.get('betweenness', 0),
                 "关联企业数": len(list(self.graph.neighbors(node)))
             })
-        pd.DataFrame(node_data).to_csv(f"{output_dir}/企业关联分析报告.csv", index=False, encoding='utf_8_sig')
+        
+        # 写入CSV文件
+        with open(f"{output_dir}/企业关联分析报告.csv", 'w', newline='', encoding='utf_8_sig') as f:
+            if node_data:
+                writer = csv.DictWriter(f, fieldnames=node_data[0].keys())
+                writer.writeheader()
+                writer.writerows(node_data)
     
     def run_analysis(self, output_dir):
         """运行数据分析流程（生成表格报告）"""
@@ -615,12 +675,19 @@ class AssociationApp(QMainWindow):
         
         try:
             if file_path.endswith('.csv') or file_path.endswith('.txt'):
-                self.df = pd.read_csv(file_path)
+                # 使用csv模块读取文件
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    self.df = list(reader)
+                    if not self.df:
+                        QMessageBox.warning(self, "提示", "文件为空")
+                        return
+                    cols = list(self.df[0].keys())
             else:
-                self.df = pd.read_excel(file_path)
+                QMessageBox.warning(self, "提示", "仅支持CSV和TXT文件格式")
+                return
             
             # 更新主体列下拉框
-            cols = self.df.columns.tolist()
             self.main_entity_cb.clear()
             self.main_entity_cb.addItems(cols)
             
