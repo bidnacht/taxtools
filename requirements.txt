@@ -1,6 +1,6 @@
-pandas
-networkx
-matplotlib
-python-louvain
-pyvis
-PyQt5
+pandas==1.0.5
+networkx==2.5
+matplotlib==3.3.4
+python-louvain==0.15
+pyvis==0.1.9
+PyQt5==5.15.4
